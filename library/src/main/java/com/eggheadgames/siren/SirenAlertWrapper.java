@@ -3,11 +3,8 @@ package com.eggheadgames.siren;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Build;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 
@@ -37,10 +34,10 @@ public class SirenAlertWrapper {
             if (mSirenListener != null) {
                 mSirenListener.onError(new NullPointerException("activity reference is null"));
             }
-        } else if (Build.VERSION.SDK_INT >= 17 && !activity.isDestroyed() || Build.VERSION.SDK_INT < 17 && !activity.isFinishing()) {
+        } else if (Build.VERSION.SDK_INT >= 17 && !activity.isDestroyed() ||
+                Build.VERSION.SDK_INT < 17 && !activity.isFinishing()) {
 
-            AlertDialog alertDialog = initDialog(activity);
-            setupDialog(alertDialog);
+            initDialog(activity);
 
             if (mSirenListener != null) {
                 mSirenListener.onShowUpdateDialog();
@@ -50,73 +47,48 @@ public class SirenAlertWrapper {
 
     @SuppressLint("InflateParams")
     private AlertDialog initDialog(Activity activity) {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity,
+                                                                   android.R.style.Theme_Material_Dialog_Alert);
 
         alertBuilder.setTitle(mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.update_available, mLocale));
         alertBuilder.setCancelable(false);
 
-        View dialogView = LayoutInflater.from(activity).inflate(R.layout.siren_dialog, null);
-        alertBuilder.setView(dialogView);
+        alertBuilder.setMessage((mSirenHelper.getAlertMessage(mActivityRef.get(), mMinAppVersion, mLocale)));
+
+        if (mSirenAlertType == SirenAlertType.FORCE
+                || mSirenAlertType == SirenAlertType.OPTION
+                || mSirenAlertType == SirenAlertType.SKIP) {
+            alertBuilder.setPositiveButton(
+                    mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.update, mLocale),
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if (mSirenListener != null) {
+                                mSirenListener.onLaunchGooglePlay();
+                            }
+                            mSirenHelper.openGooglePlay(mActivityRef.get());
+                        }
+                    });
+        }
+
+        if (mSirenAlertType == SirenAlertType.OPTION
+                || mSirenAlertType == SirenAlertType.SKIP) {
+
+            alertBuilder.setNegativeButton(
+                    mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.next_time, mLocale),
+                    new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if (mSirenListener != null) {
+                                mSirenListener.onCancel();
+                            }
+                        }
+                    });
+        }
 
         AlertDialog alertDialog = alertBuilder.create();
         alertDialog.show();
 
         return alertDialog;
-    }
-
-    private void setupDialog(final AlertDialog dialog) {
-        TextView message = (TextView) dialog.findViewById(R.id.tvSirenAlertMessage);
-        Button update = (Button) dialog.findViewById(R.id.btnSirenUpdate);
-        Button nextTime = (Button) dialog.findViewById(R.id.btnSirenNextTime);
-        final Button skip = (Button) dialog.findViewById(R.id.btnSirenSkip);
-
-        update.setText(mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.update, mLocale));
-        nextTime.setText(mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.next_time, mLocale));
-        skip.setText(mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.skip_this_version, mLocale));
-
-        message.setText(mSirenHelper.getAlertMessage(mActivityRef.get(), mMinAppVersion, mLocale));
-
-        if (mSirenAlertType == SirenAlertType.FORCE
-                || mSirenAlertType == SirenAlertType.OPTION
-                || mSirenAlertType == SirenAlertType.SKIP) {
-            update.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mSirenListener != null) {
-                        mSirenListener.onLaunchGooglePlay();
-                    }
-                    dialog.dismiss();
-                    mSirenHelper.openGooglePlay(mActivityRef.get());
-                }
-            });
-        }
-
-        if (mSirenAlertType == SirenAlertType.OPTION
-                || mSirenAlertType == SirenAlertType.SKIP) {
-            nextTime.setVisibility(View.VISIBLE);
-            nextTime.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mSirenListener != null) {
-                        mSirenListener.onCancel();
-                    }
-                    dialog.dismiss();
-                }
-            });
-        }
-        if (mSirenAlertType == SirenAlertType.SKIP) {
-            skip.setVisibility(View.VISIBLE);
-            skip.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mSirenListener != null) {
-                        mSirenListener.onSkipVersion();
-                    }
-
-                    mSirenHelper.setVersionSkippedByUser(mActivityRef.get(), mMinAppVersion);
-                    dialog.dismiss();
-                }
-            });
-        }
     }
 }
