@@ -50,7 +50,7 @@ public class SirenAlertWrapper {
 
     @SuppressLint("InflateParams")
     private AlertDialog initDialog(Activity activity) {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity);
+        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_Alert);
 
         alertBuilder.setTitle(mSirenHelper.getLocalizedString(mActivityRef.get(), R.string.update_available, mLocale));
         alertBuilder.setCancelable(false);
